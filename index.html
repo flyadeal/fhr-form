@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flight Handling Report · flyadeal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red: #E8002D;
+    --red-dark: #b5001f;
+    --red-soft: rgba(232,0,45,0.08);
+    --ink: #0f0f0f;
+    --ink-mid: #444;
+    --ink-light: #888;
+    --border: #e0e0e0;
+    --bg: #f5f4f0;
+    --white: #ffffff;
+    --card: #ffffff;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); min-height: 100vh; padding-bottom: 60px; }
+
+  header { background: var(--ink); color: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+  .header-inner { max-width: 840px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+  .logo-mark { background: var(--red); color: white; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; padding: 6px 10px; border-radius: 5px; white-space: nowrap; }
+  .header-titles { flex: 1; }
+  .header-titles h1 { font-size: 15px; font-weight: 600; color: white; }
+  .header-titles p { font-size: 11px; color: rgba(255,255,255,0.45); font-family: var(--mono); margin-top: 2px; }
+  .version-badge { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.12); padding: 3px 7px; border-radius: 4px; }
+
+  .mandatory-notice { background: var(--red-soft); border-left: 3px solid var(--red); max-width: 840px; margin: 20px auto 0; padding: 10px 16px; border-radius: 0 6px 6px 0; font-size: 12px; color: var(--ink-mid); font-family: var(--mono); }
+  .mandatory-notice strong { color: var(--red); }
+
+  .form-wrap { max-width: 840px; margin: 14px auto 0; padding: 0 16px; }
+
+  .meta-banner { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; box-shadow: var(--shadow); }
+  .meta-field { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 5px; }
+  .meta-field label { font-size: 10px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-light); }
+  .meta-field label .req { color: var(--red); margin-left: 2px; }
+  .meta-field input { width: 100%; border: 1.5px solid var(--border); border-radius: 6px; padding: 9px 12px; font-family: var(--sans); font-size: 14px; color: var(--ink); background: #fafafa; transition: border-color 0.2s; outline: none; }
+  .meta-field input:focus { border-color: var(--red); background: white; box-shadow: 0 0 0 3px var(--red-soft); }
+  .meta-field input.error { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+
+  .section-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); animation: slideIn 0.3s forwards; }
+  @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+  .section-card:nth-child(1){animation-delay:.05s} .section-card:nth-child(2){animation-delay:.10s}
+  .section-card:nth-child(3){animation-delay:.15s} .section-card:nth-child(4){animation-delay:.20s}
+  .section-card:nth-child(5){animation-delay:.25s} .section-card:nth-child(6){animation-delay:.30s}
+
+  .section-header { display: flex; align-items: center; gap: 12px; padding: 13px 18px; background: #fafafa; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .section-header:hover { background: #f2f2f2; }
+  .sec-letter { width: 28px; height: 28px; background: var(--red); color: white; font-family: var(--mono); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; }
+  .sec-title { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); flex: 1; }
+  .sec-badge { font-size: 10px; font-family: var(--mono); color: var(--red); background: var(--red-soft); padding: 2px 7px; border-radius: 10px; }
+  .sec-chevron { color: var(--ink-light); font-size: 11px; transition: transform 0.22s; }
+  .section-card.collapsed .sec-chevron { transform: rotate(-90deg); }
+  .section-card.collapsed .section-body { display: none; }
+  .section-body { padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .section-body.cols-1 { grid-template-columns: 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.span2 { grid-column: span 2; }
+  .field label { font-size: 11px; font-family: var(--mono); color: var(--ink-mid); letter-spacing: 0.03em; }
+  .field label .req { color: var(--red); margin-left: 2px; font-weight: 600; }
+  .field input, .field textarea {
+    border: 1.5px solid var(--border); border-radius: 7px; padding: 10px 12px;
+    font-family: var(--sans); font-size: 14px; color: var(--ink); background: #fafafa;
+    transition: border-color 0.2s, box-shadow 0.2s; outline: none; width: 100%;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--red); background: white; box-shadow: 0 0 0 3px var(--red-soft); }
+  .field input.error, .field textarea.error { border-color: var(--red) !important; box-shadow: 0 0 0 3px var(--red-soft) !important; }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field .hint { font-size: 10px; color: var(--ink-light); font-family: var(--mono); }
+  .err-msg { font-size: 10px; color: var(--red); font-family: var(--mono); display: none; margin-top: 1px; }
+  .field.has-error .err-msg { display: block; }
+
+  /* FLIGHT NUMBER — F3 prefix box */
+  .fn-wrap { display: flex; border: 1.5px solid var(--border); border-radius: 7px; overflow: hidden; background: #fafafa; transition: border-color 0.2s, box-shadow 0.2s; }
+  .fn-wrap:focus-within { border-color: var(--red); background: white; box-shadow: 0 0 0 3px var(--red-soft); }
+  .fn-wrap.error { border-color: var(--red) !important; box-shadow: 0 0 0 3px var(--red-soft) !important; }
+  .fn-wrap.na-active { border-color: #aaa; background: #f0f0f0; }
+  .fn-prefix { background: var(--ink); color: white; font-family: var(--mono); font-size: 13px; font-weight: 500; padding: 10px 13px; white-space: nowrap; flex-shrink: 0; letter-spacing: 0.06em; transition: background 0.18s; }
+  .fn-wrap.na-active .fn-prefix { background: #aaa; }
+  .fn-input { border: none; outline: none; background: transparent; font-family: var(--mono); font-size: 14px; color: var(--ink); padding: 10px 10px; flex: 1; min-width: 0; letter-spacing: 0.05em; }
+  .fn-input:disabled { color: #999; cursor: not-allowed; }
+
+  /* TIME INPUT */
+  .time-input { font-family: var(--mono) !important; letter-spacing: 0.08em !important; }
+  .time-input::placeholder { color: #bbb; letter-spacing: 0.04em; }
+  .time-input:disabled { color: #999; cursor: not-allowed; opacity: 0.6; }
+
+  /* N/A BUTTON */
+  .na-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; background: none; border: 1.5px solid var(--border); border-radius: 5px; padding: 5px 11px; font-family: var(--mono); font-size: 10px; color: var(--ink-light); cursor: pointer; transition: all 0.18s; width: fit-content; letter-spacing: 0.03em; }
+  .na-btn:hover { border-color: #888; color: #444; background: #f5f5f5; }
+  .na-btn.active { border-color: #555; background: #555; color: white; }
+  .na-btn .na-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* TIME GROUP */
+  .time-group { grid-column: span 2; }
+  .time-group-label { font-size: 11px; font-family: var(--mono); color: var(--ink-mid); letter-spacing: 0.03em; margin-bottom: 8px; font-weight: 500; }
+  .time-group-label .req { color: var(--red); margin-left: 2px; font-weight: 600; }
+  .time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* DISRUPTION */
+  .disruption-grid { grid-column: span 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .check-tile { border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fafafa; }
+  .check-tile:hover { border-color: var(--red); background: var(--red-soft); }
+  .check-tile input[type="checkbox"] { display: none; }
+  .tile-box { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.18s; background: white; }
+  .tile-box::after { content: ''; width: 9px; height: 6px; border-left: 2px solid white; border-bottom: 2px solid white; transform: rotate(-45deg) translateY(-1px); opacity: 0; transition: opacity 0.15s; }
+  .check-tile.checked { border-color: var(--red); background: var(--red-soft); }
+  .check-tile.checked .tile-box { background: var(--red); border-color: var(--red); }
+  .check-tile.checked .tile-box::after { opacity: 1; }
+  .check-tile span { font-size: 13px; font-weight: 500; color: var(--ink-mid); }
+  .check-tile.checked span { color: var(--red-dark); }
+
+  .submit-section { margin-top: 20px; padding: 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .submit-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+  .submit-btn { background: var(--red); color: white; border: none; border-radius: 8px; padding: 12px 28px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; transition: background 0.2s, transform 0.1s; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .submit-btn:hover { background: var(--red-dark); }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .submit-info { font-size: 11px; color: var(--ink-light); font-family: var(--mono); margin-top: 10px; line-height: 1.6; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .submit-btn.loading .spinner { display: block; }
+  .submit-btn.loading .btn-text { opacity: 0.7; }
+
+  .error-banner { background: #fff0f2; border: 1px solid #ffb3bf; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; color: #b5001f; display: none; font-family: var(--mono); }
+  .error-banner.show { display: block; }
+
+  .success-overlay { display: none; position: fixed; inset: 0; background: rgba(15,15,15,0.8); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+  .success-overlay.show { display: flex; }
+  .success-card { background: white; border-radius: 16px; padding: 40px 36px; max-width: 420px; width: 100%; text-align: center; animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .success-icon { width: 64px; height: 64px; background: #e6f4ee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; }
+  .success-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .success-card p { font-size: 13px; color: var(--ink-mid); line-height: 1.65; }
+  .success-flight { font-family: var(--mono); font-size: 14px; color: var(--red); font-weight: 500; margin: 12px 0; background: var(--red-soft); padding: 8px 14px; border-radius: 6px; display: inline-block; }
+  .success-close { margin-top: 24px; background: var(--ink); color: white; border: none; border-radius: 8px; padding: 11px 28px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+  .success-close:hover { background: #333; }
+
+  footer { text-align: center; padding: 28px 16px 0; font-size: 11px; font-family: var(--mono); color: var(--ink-light); }
+
+  @media (max-width: 600px) {
+    .section-body { grid-template-columns: 1fr; }
+    .field.span2, .time-group, .disruption-grid { grid-column: span 1; }
+    .time-pair { grid-template-columns: 1fr; }
+    .disruption-grid { grid-template-columns: 1fr 1fr; }
+    .submit-row { grid-template-columns: 1fr; }
+    .meta-banner { flex-direction: column; }
+    .header-inner { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-mark">flyadeal</div>
+    <div class="header-titles">
+      <h1>Flight Handling Report</h1>
+      <p>Ground Handling Agent Submission · All times in UTC · V1.0</p>
+    </div>
+    <div class="version-badge">V1.0</div>
+  </div>
+</header>
+
+<div style="max-width:840px;margin:0 auto;padding:0 16px;">
+  <div class="mandatory-notice">
+    <strong>* Required fields:</strong> Staff name, station, flight date, email, and all of sections A, B, C must be completed before submitting.
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <div class="error-banner" id="errorBanner">⚠ Please fill in all required fields before submitting.</div>
+
+  <!-- META -->
+  <div class="meta-banner">
+    <div class="meta-field">
+      <label>Staff Name <span class="req">*</span></label>
+      <input type="text" id="staffName" placeholder="Full name" autocomplete="name"/>
+      <div class="err-msg">Required</div>
+    </div>
+    <div class="meta-field">
+      <label>Station <span class="req">*</span></label>
+      <input type="text" id="station" placeholder="e.g. JED" autocomplete="off" style="text-transform:uppercase;"/>
+      <div class="err-msg">Required</div>
+    </div>
+    <div class="meta-field">
+      <label>Flight Date <span class="req">*</span></label>
+      <input type="date" id="reportDate"/>
+      <div class="err-msg">Required</div>
+    </div>
+    <div class="meta-field">
+      <label>Your Email <span class="req">*</span></label>
+      <input type="email" id="senderEmail" placeholder="you@groundhandler.com"/>
+      <div class="err-msg">Valid email required</div>
+    </div>
+  </div>
+
+  <!-- A -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">A</div>
+      <div class="sec-title">Flight Identification</div>
+      <div class="sec-badge">Required</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+
+      <div class="field">
+        <label>Arrival Flight Number <span class="req">*</span></label>
+        <div class="fn-wrap" id="wrap-arrFlightNum">
+          <div class="fn-prefix">F3</div>
+          <input class="fn-input" type="text" inputmode="numeric" id="arrFlightNum" placeholder="101" maxlength="6" oninput="onFlightNumInput(this)"/>
+        </div>
+        <button type="button" class="na-btn" id="na-arrFlightNum" onclick="toggleNAFlight('arrFlightNum')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter number or select N/A</div>
+      </div>
+
+      <div class="field">
+        <label>Departure Flight Number <span class="req">*</span></label>
+        <div class="fn-wrap" id="wrap-depFlightNum">
+          <div class="fn-prefix">F3</div>
+          <input class="fn-input" type="text" inputmode="numeric" id="depFlightNum" placeholder="102" maxlength="6" oninput="onFlightNumInput(this)"/>
+        </div>
+        <button type="button" class="na-btn" id="na-depFlightNum" onclick="toggleNAFlight('depFlightNum')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter number or select N/A</div>
+      </div>
+
+      <div class="field">
+        <label>Destination <span class="req">*</span></label>
+        <input type="text" id="destination" placeholder="e.g. JED, RUH, DMM"/>
+        <button type="button" class="na-btn" id="na-destination" onclick="toggleNAText('destination')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter destination or select N/A</div>
+      </div>
+
+      <div class="field">
+        <label>Aircraft Registration <span class="req">*</span></label>
+        <input type="text" id="acReg" placeholder="e.g. HZ-FAA"/>
+        <div class="err-msg">Required</div>
+      </div>
+
+      <!-- STA before STD -->
+      <div class="field">
+        <label>STA – Scheduled Time of Arrival <span class="req">*</span></label>
+        <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="sta" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+        <span class="hint">24-hr UTC · type digits, colon auto-added</span>
+        <button type="button" class="na-btn" id="na-sta" onclick="toggleNATime('sta')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter time or select N/A</div>
+      </div>
+
+      <div class="field">
+        <label>STD – Scheduled Time of Departure <span class="req">*</span></label>
+        <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="std" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+        <span class="hint">24-hr UTC · type digits, colon auto-added</span>
+        <button type="button" class="na-btn" id="na-std" onclick="toggleNATime('std')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter time or select N/A</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">B</div>
+      <div class="sec-title">Timing & Operational Milestones</div>
+      <div class="sec-badge">Required</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+
+      <!-- ATA before ATD -->
+      <div class="field">
+        <label>ATA – Actual Time of Arrival <span class="req">*</span></label>
+        <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="ata" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+        <span class="hint">24-hr UTC</span>
+        <button type="button" class="na-btn" id="na-ata" onclick="toggleNATime('ata')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter time or select N/A</div>
+      </div>
+
+      <div class="field">
+        <label>ATD – Actual Time of Departure <span class="req">*</span></label>
+        <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="atd" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+        <span class="hint">24-hr UTC</span>
+        <button type="button" class="na-btn" id="na-atd" onclick="toggleNATime('atd')">
+          <span class="na-dot"></span>N/A
+        </button>
+        <div class="err-msg">Required — enter time or select N/A</div>
+      </div>
+
+      <div class="time-group">
+        <div class="time-group-label">Check-in <span class="req">*</span></div>
+        <div class="time-pair">
+          <div class="field">
+            <label>▶ Start</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="checkInStart" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-checkInStart" onclick="toggleNATime('checkInStart')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+          <div class="field">
+            <label>⏹ Finish / Close</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="checkInEnd" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-checkInEnd" onclick="toggleNATime('checkInEnd')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="time-group">
+        <div class="time-group-label">PAX Embarkation <span class="req">*</span></div>
+        <div class="time-pair">
+          <div class="field">
+            <label>▶ Start</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="embStart" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-embStart" onclick="toggleNATime('embStart')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+          <div class="field">
+            <label>⏹ Finish / Close</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="embEnd" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-embEnd" onclick="toggleNATime('embEnd')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="time-group">
+        <div class="time-group-label">PAX Disembarkation <span class="req">*</span></div>
+        <div class="time-pair">
+          <div class="field">
+            <label>▶ Start</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="disembStart" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-disembStart" onclick="toggleNATime('disembStart')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+          <div class="field">
+            <label>⏹ Finish / Close</label>
+            <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="disembEnd" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+            <button type="button" class="na-btn" id="na-disembEnd" onclick="toggleNATime('disembEnd')"><span class="na-dot"></span>N/A</button>
+            <div class="err-msg">Required</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">C</div>
+      <div class="sec-title">Passenger Information</div>
+      <div class="sec-badge">Required</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Arrival PAX Count <span class="req">*</span></label>
+        <input type="number" id="arrPax" min="0" placeholder="0"/>
+        <div class="err-msg">Required</div>
+      </div>
+      <div class="field">
+        <label>Departure PAX Count <span class="req">*</span></label>
+        <input type="number" id="depPax" min="0" placeholder="0"/>
+        <div class="err-msg">Required</div>
+      </div>
+      <div class="field">
+        <label>Arrival PRM / Wheelchair <span class="req">*</span></label>
+        <input type="number" id="arrPrm" min="0" placeholder="0"/>
+        <div class="err-msg">Required</div>
+      </div>
+      <div class="field">
+        <label>Departure PRM / Wheelchair <span class="req">*</span></label>
+        <input type="number" id="depPrm" min="0" placeholder="0"/>
+        <div class="err-msg">Required</div>
+      </div>
+      <div class="field">
+        <label>Left Behind Baggage – Count <span class="req">*</span></label>
+        <input type="number" id="lbbCount" min="0" placeholder="0" oninput="toggleLbbReason()"/>
+        <div class="err-msg">Required</div>
+      </div>
+      <div class="field" id="lbbReasonField" style="opacity:0.4;pointer-events:none;">
+        <label>Left Behind Baggage – Reason <span class="req" id="lbbReasonReq" style="display:none;">*</span></label>
+        <input type="text" id="lbbReason" placeholder="Required if count > 0"/>
+        <div class="err-msg">Required when bag count is above 0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">D</div>
+      <div class="sec-title">Delay & Performance Summary</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Delay Duration (HH:MM)</label>
+        <input class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off" id="delayDuration" oninput="fmtTime(this)" onblur="validateTimeField(this)"/>
+        <span class="hint">Leave blank or 00:00 if no delay</span>
+      </div>
+      <div class="field span2">
+        <label>Delay Remarks</label>
+        <textarea id="delayRemarks" placeholder="Describe cause and impact of delay…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- E — Other removed -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">E</div>
+      <div class="sec-title">Disruption Services Provided</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="disruption-grid">
+        <label class="check-tile" onclick="toggleCheck(this)">
+          <input type="checkbox" id="disMeals"/><div class="tile-box"></div><span>Meals</span>
+        </label>
+        <label class="check-tile" onclick="toggleCheck(this)">
+          <input type="checkbox" id="disBeverages"/><div class="tile-box"></div><span>Beverages</span>
+        </label>
+        <label class="check-tile" onclick="toggleCheck(this)">
+          <input type="checkbox" id="disSnacks"/><div class="tile-box"></div><span>Snacks</span>
+        </label>
+        <label class="check-tile" onclick="toggleCheck(this)">
+          <input type="checkbox" id="disHotel"/><div class="tile-box"></div><span>Hotel Accommodation</span>
+        </label>
+        <label class="check-tile" onclick="toggleCheck(this)">
+          <input type="checkbox" id="disVouchers"/><div class="tile-box"></div><span>Vouchers</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- F -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">F</div>
+      <div class="sec-title">Remarks</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body cols-1">
+      <div class="field">
+        <label>General Remarks</label>
+        <textarea id="remarks" rows="4" placeholder="Any additional observations, incidents, or notes for IOCC…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="submit-section">
+    <div class="submit-row">
+      <div class="field" style="margin:0;">
+        <label>Submitting to</label>
+        <input type="text" value="iocc.gops@flyadeal.com" disabled style="opacity:0.6;cursor:not-allowed;"/>
+      </div>
+      <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+        <div class="spinner"></div>
+        <span class="btn-text">✈ Submit Report</span>
+      </button>
+    </div>
+    <p class="submit-info">
+      Report is submitted securely to IOCC · A copy is sent to your email automatically.<br>
+      Prepared by Abdullah Bahnshal, Domestic Stations Manager — flyadeal · V1.0
+    </p>
+  </div>
+
+  <footer>flyadeal · Ground Operations · Flight Handling Report V1.0</footer>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <h2>Report Submitted</h2>
+    <div class="success-flight" id="successFlight"></div>
+    <p>Your Flight Handling Report has been received by IOCC.<br>A confirmation copy has been sent to your email.</p>
+    <button class="success-close" onclick="resetForm()">Submit Another Report</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ⚙️  CONFIGURATION — REPLACE THIS URL AFTER SETTING UP
+//     YOUR POWER AUTOMATE FLOW (see setup guide)
+// ============================================================
+const POWER_AUTOMATE_WEBHOOK_URL = "https://default6b8805cf83d04342bd38fb3b3df952.be.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/dc711df786d144fd882c25d652c3d548/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3O_nd-ZbB2La9Kv6isx7sq3r1rSU8I-WxZohhqG4oiU";
+// ============================================================
+
+const naState = {};
+
+document.getElementById('reportDate').valueAsDate = new Date();
+
+function toggleSection(header) {
+  header.closest('.section-card').classList.toggle('collapsed');
+}
+
+function toggleCheck(tile) {
+  event.preventDefault();
+  const cb = tile.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  tile.classList.toggle('checked', cb.checked);
+}
+
+function toggleLbbReason() {
+  const count = parseInt(document.getElementById('lbbCount').value) || 0;
+  const field = document.getElementById('lbbReasonField');
+  const req   = document.getElementById('lbbReasonReq');
+  if (count > 0) {
+    field.style.opacity = '1'; field.style.pointerEvents = 'auto'; req.style.display = 'inline';
+  } else {
+    field.style.opacity = '0.4'; field.style.pointerEvents = 'none'; req.style.display = 'none';
+    document.getElementById('lbbReason').value = '';
+    document.getElementById('lbbReason').classList.remove('error');
+  }
+}
+
+// Flight number — digits only
+function onFlightNumInput(el) {
+  el.value = el.value.replace(/[^0-9]/g, '');
+}
+
+// N/A for plain text fields (destination etc.)
+function toggleNAText(fieldId) {
+  const input = document.getElementById(fieldId);
+  const btn   = document.getElementById('na-' + fieldId);
+  naState[fieldId] = !naState[fieldId];
+  if (naState[fieldId]) {
+    input.value = 'N/A'; input.disabled = true;
+    input.style.opacity = '0.6';
+    btn.classList.add('active');
+  } else {
+    input.value = ''; input.disabled = false;
+    input.style.opacity = '1';
+    btn.classList.remove('active');
+    input.focus();
+  }
+  input.classList.remove('error');
+  input.closest('.field')?.classList.remove('has-error');
+}
+
+// N/A for flight number fields
+function toggleNAFlight(fieldId) {
+  const input = document.getElementById(fieldId);
+  const wrap  = document.getElementById('wrap-' + fieldId);
+  const btn   = document.getElementById('na-' + fieldId);
+  naState[fieldId] = !naState[fieldId];
+  if (naState[fieldId]) {
+    input.value = 'NA'; input.disabled = true;
+    wrap.classList.add('na-active'); btn.classList.add('active');
+  } else {
+    input.value = ''; input.disabled = false;
+    wrap.classList.remove('na-active'); btn.classList.remove('active');
+    input.focus();
+  }
+  wrap.classList.remove('error');
+  input.closest('.field')?.classList.remove('has-error');
+}
+
+// N/A for time fields
+function toggleNATime(fieldId) {
+  const input = document.getElementById(fieldId);
+  const btn   = document.getElementById('na-' + fieldId);
+  naState[fieldId] = !naState[fieldId];
+  if (naState[fieldId]) {
+    input.value = 'N/A'; input.disabled = true;
+    btn.classList.add('active');
+  } else {
+    input.value = ''; input.disabled = false;
+    btn.classList.remove('active');
+    input.focus();
+  }
+  input.classList.remove('error');
+  input.closest('.field')?.classList.remove('has-error');
+}
+
+// Time auto-format
+function fmtTime(el) {
+  if (naState[el.id]) return;
+  let v = el.value.replace(/[^0-9]/g, '');
+  if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2, 4);
+  el.value = v;
+}
+
+function isValidTime(v) {
+  if (!v) return false;
+  if (v === 'N/A') return true;
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+}
+
+function validateTimeField(el) {
+  if (naState[el.id]) return;
+  const v = el.value.trim();
+  if (v && !isValidTime(v)) {
+    el.classList.add('error');
+    el.closest('.field')?.classList.add('has-error');
+  } else {
+    el.classList.remove('error');
+    el.closest('.field')?.classList.remove('has-error');
+  }
+}
+
+// Return full flight number string
+function getFlightNum(id) {
+  const val = document.getElementById(id).value.trim();
+  if (!val) return '';
+  if (val === 'NA') return 'NA';
+  return 'F3 ' + val;
+}
+
+const REQUIRED_FIELDS = [
+  { id: 'staffName',    label: 'Staff Name' },
+  { id: 'station',      label: 'Station' },
+  { id: 'reportDate',   label: 'Flight Date' },
+  { id: 'senderEmail',  label: 'Your Email', validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+  { id: 'arrFlightNum', label: 'Arrival Flight Number',   validate: v => v !== '' },
+  { id: 'depFlightNum', label: 'Departure Flight Number', validate: v => v !== '' },
+  { id: 'destination',  label: 'Destination', validate: v => v !== '' },
+  { id: 'acReg',        label: 'Aircraft Registration' },
+  { id: 'sta',  label: 'STA', validate: isValidTime },
+  { id: 'std',  label: 'STD', validate: isValidTime },
+  { id: 'ata',          label: 'ATA',                 validate: isValidTime },
+  { id: 'atd',          label: 'ATD',                 validate: isValidTime },
+  { id: 'checkInStart', label: 'Check-in Start',      validate: isValidTime },
+  { id: 'checkInEnd',   label: 'Check-in End',        validate: isValidTime },
+  { id: 'embStart',     label: 'Embarkation Start',   validate: isValidTime },
+  { id: 'embEnd',       label: 'Embarkation End',     validate: isValidTime },
+  { id: 'disembStart',  label: 'Disembarkation Start',validate: isValidTime },
+  { id: 'disembEnd',    label: 'Disembarkation End',  validate: isValidTime },
+  { id: 'arrPax',   label: 'Arrival PAX',   validate: v => v !== '' && !isNaN(v) },
+  { id: 'depPax',   label: 'Departure PAX', validate: v => v !== '' && !isNaN(v) },
+  { id: 'arrPrm',   label: 'Arrival PRM',   validate: v => v !== '' && !isNaN(v) },
+  { id: 'depPrm',   label: 'Departure PRM', validate: v => v !== '' && !isNaN(v) },
+  { id: 'lbbCount', label: 'LBB Count',     validate: v => v !== '' && !isNaN(v) },
+];
+
+function validate() {
+  let valid = true;
+  document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+  document.querySelectorAll('.has-error').forEach(el => el.classList.remove('has-error'));
+  document.querySelectorAll('.fn-wrap.error').forEach(el => el.classList.remove('error'));
+
+  REQUIRED_FIELDS.forEach(f => {
+    const el  = document.getElementById(f.id);
+    if (!el) return;
+    const val = el.value.trim();
+    const ok  = f.validate ? f.validate(val) : val !== '';
+    if (!ok) {
+      const wrap = document.getElementById('wrap-' + f.id);
+      if (wrap) wrap.classList.add('error');
+      else el.classList.add('error');
+      el.closest('.field')?.classList.add('has-error');
+      el.closest('.section-card')?.classList.remove('collapsed');
+      valid = false;
+    }
+  });
+
+  const lbbCount = parseInt(document.getElementById('lbbCount').value) || 0;
+  if (lbbCount > 0) {
+    const reason = document.getElementById('lbbReason').value.trim();
+    if (!reason) {
+      document.getElementById('lbbReason').classList.add('error');
+      document.getElementById('lbbReasonField').classList.add('has-error');
+      valid = false;
+    }
+  }
+  return valid;
+}
+
+function collectData() {
+  const v  = id => (document.getElementById(id)?.value || '').trim();
+  const cb = id => document.getElementById(id)?.checked || false;
+  const disList = ['Meals','Beverages','Snacks','Hotel Accommodation','Vouchers']
+    .filter((_, i) => [cb('disMeals'),cb('disBeverages'),cb('disSnacks'),cb('disHotel'),cb('disVouchers')][i])
+    .join(', ') || 'None';
+
+  return {
+    staffName:    v('staffName'),
+    station:      v('station').toUpperCase(),
+    reportDate:   v('reportDate'),
+    senderEmail:  v('senderEmail'),
+    arrFlightNum: getFlightNum('arrFlightNum'),
+    depFlightNum: getFlightNum('depFlightNum'),
+    destination:  v('destination'),
+    acReg:        v('acReg'),
+    sta: v('sta'), std: v('std'),
+    ata: v('ata'), atd: v('atd'),
+    checkInStart: v('checkInStart'), checkInEnd: v('checkInEnd'),
+    embStart:     v('embStart'),     embEnd:     v('embEnd'),
+    disembStart:  v('disembStart'),  disembEnd:  v('disembEnd'),
+    arrPax:  v('arrPax'),  depPax:  v('depPax'),
+    arrPrm:  v('arrPrm'),  depPrm:  v('depPrm'),
+    lbbCount: v('lbbCount'), lbbReason: v('lbbReason'),
+    delayDuration: v('delayDuration'), delayRemarks: v('delayRemarks'),
+    disruptionServices: disList,
+    remarks: v('remarks'),
+  };
+}
+
+async function handleSubmit() {
+  const banner = document.getElementById('errorBanner');
+  banner.classList.remove('show');
+
+  if (!validate()) {
+    banner.classList.add('show');
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  if (POWER_AUTOMATE_WEBHOOK_URL === "PASTE_YOUR_POWER_AUTOMATE_URL_HERE") {
+    alert("⚙️ Setup required: Please paste your Power Automate webhook URL into the form's code.\nSee the setup guide for instructions.");
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.querySelector('.btn-text').textContent = 'Submitting…';
+
+  const data = collectData();
+
+  try {
+    const res = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const label = (data.depFlightNum || data.arrFlightNum) + ' · ' + data.destination + ' · ' + data.reportDate;
+    document.getElementById('successFlight').textContent = label;
+    document.getElementById('successOverlay').classList.add('show');
+  } catch (err) {
+    alert('Submission failed. Please check your connection and try again.\n\nError: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-text').textContent = '✈ Submit Report';
+  }
+}
+
+function resetForm() {
+  document.getElementById('successOverlay').classList.remove('show');
+  document.querySelectorAll('input:not([style*="not-allowed"]), textarea').forEach(el => {
+    if (el.type === 'date') el.valueAsDate = new Date();
+    else if (el.type === 'checkbox') el.checked = false;
+    else el.value = '';
+    el.classList.remove('error');
+    el.disabled = false;
+  });
+  document.querySelectorAll('.check-tile').forEach(t => t.classList.remove('checked'));
+  document.querySelectorAll('.has-error').forEach(el => el.classList.remove('has-error'));
+  document.querySelectorAll('.fn-wrap').forEach(w => w.classList.remove('na-active','error'));
+  document.querySelectorAll('input[id="destination"]').forEach(el => { el.style.opacity='1'; });
+  document.querySelectorAll('.na-btn').forEach(b => b.classList.remove('active'));
+  Object.keys(naState).forEach(k => delete naState[k]);
+  toggleLbbReason();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
