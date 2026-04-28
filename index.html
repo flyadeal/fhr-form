@@ -106,6 +106,19 @@
   .time-group-label .req { color: var(--red); margin-left: 2px; font-weight: 600; }
   .time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+  /* STAND TYPE — mutually exclusive toggle */
+  .stand-toggle { grid-column: span 2; display: flex; gap: 12px; }
+  .stand-btn { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fafafa; }
+  .stand-btn:hover { border-color: var(--red); background: var(--red-soft); }
+  .stand-btn.selected { border-color: var(--red); background: var(--red-soft); }
+  .stand-btn span { font-size: 13px; font-weight: 500; color: var(--ink-mid); }
+  .stand-btn.selected span { color: var(--red-dark); }
+  .stand-radio { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.18s; background: white; }
+  .stand-radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red); opacity: 0; transition: opacity 0.15s; }
+  .stand-btn.selected .stand-radio { border-color: var(--red); }
+  .stand-btn.selected .stand-radio::after { opacity: 1; }
+  .stand-btn.error-tile { border-color: var(--red) !important; box-shadow: 0 0 0 3px var(--red-soft) !important; }
+
   /* DISRUPTION */
   .disruption-grid { grid-column: span 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .check-tile { border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fafafa; }
@@ -173,7 +186,7 @@
 
 <div style="max-width:840px;margin:0 auto;padding:0 16px;">
   <div class="mandatory-notice">
-    <strong>* Required fields:</strong> Staff name, station, flight date, email, and all of sections A, B, C must be completed before submitting.
+    <strong>* Required fields:</strong> Staff name, station, flight date, email, and all of sections A, B, C (including stand type) must be completed before submitting.
   </div>
 </div>
 
@@ -366,10 +379,53 @@
     </div>
   </div>
 
-  <!-- C -->
+  <!-- C: RAMP OPERATIONS -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection(this)">
       <div class="sec-letter">C</div>
+      <div class="sec-title">Ramp Operations</div>
+      <div class="sec-badge">Required</div>
+      <div class="sec-chevron">▼</div>
+    </div>
+    <div class="section-body">
+
+      <div class="field span2">
+        <label>Aircraft Stand Type <span class="req">*</span></label>
+        <div class="stand-toggle" id="standToggle">
+          <button type="button" class="stand-btn" id="stand-remote" onclick="selectStand('remote')">
+            <div class="stand-radio"></div>
+            <span>Remote Stand</span>
+          </button>
+          <button type="button" class="stand-btn" id="stand-contact" onclick="selectStand('contact')">
+            <div class="stand-radio"></div>
+            <span>Contact Stand</span>
+          </button>
+        </div>
+        <div class="err-msg" id="err-standType" style="display:none;">Required — select a stand type</div>
+      </div>
+
+      <div class="field span2">
+        <label>GSE Used <span style="font-size:10px;color:var(--ink-light);font-family:var(--mono);margin-left:6px;">optional</span></label>
+        <div class="disruption-grid">
+          <label class="check-tile" onclick="toggleCheck(this)">
+            <input type="checkbox" id="gseGPU"/><div class="tile-box"></div><span>GPU</span>
+          </label>
+          <label class="check-tile" onclick="toggleCheck(this)">
+            <input type="checkbox" id="gseACU"/><div class="tile-box"></div><span>ACU</span>
+          </label>
+          <label class="check-tile" onclick="toggleCheck(this)">
+            <input type="checkbox" id="gseASU"/><div class="tile-box"></div><span>ASU</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- D: PASSENGER INFORMATION -->
+  <div class="section-card">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="sec-letter">D</div>
       <div class="sec-title">Passenger Information</div>
       <div class="sec-badge">Required</div>
       <div class="sec-chevron">▼</div>
@@ -411,7 +467,7 @@
   <!-- D -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection(this)">
-      <div class="sec-letter">D</div>
+      <div class="sec-letter">E</div>
       <div class="sec-title">Delay & Performance Summary</div>
       <div class="sec-chevron">▼</div>
     </div>
@@ -431,7 +487,7 @@
   <!-- E — Other removed -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection(this)">
-      <div class="sec-letter">E</div>
+      <div class="sec-letter">F</div>
       <div class="sec-title">Disruption Services Provided</div>
       <div class="sec-chevron">▼</div>
     </div>
@@ -459,7 +515,7 @@
   <!-- F -->
   <div class="section-card">
     <div class="section-header" onclick="toggleSection(this)">
-      <div class="sec-letter">F</div>
+      <div class="sec-letter">G</div>
       <div class="sec-title">Remarks</div>
       <div class="sec-chevron">▼</div>
     </div>
@@ -542,6 +598,17 @@ function toggleLbbReason() {
 // Flight number — digits only
 function onFlightNumInput(el) {
   el.value = el.value.replace(/[^0-9]/g, '');
+}
+
+// Stand type selection
+let selectedStand = '';
+function selectStand(type) {
+  selectedStand = type;
+  document.getElementById('stand-remote').classList.toggle('selected', type === 'remote');
+  document.getElementById('stand-contact').classList.toggle('selected', type === 'contact');
+  document.getElementById('stand-remote').classList.remove('error-tile');
+  document.getElementById('stand-contact').classList.remove('error-tile');
+  document.getElementById('err-standType').style.display = 'none';
 }
 
 // N/A for plain text fields (destination etc.)
@@ -716,6 +783,8 @@ function collectData() {
     arrPrm:  v('arrPrm'),  depPrm:  v('depPrm'),
     lbbCount: v('lbbCount'), lbbReason: v('lbbReason'),
     delayDuration: v('delayDuration'), delayRemarks: v('delayRemarks'),
+    standType:    selectedStand === 'remote' ? 'Remote Stand' : selectedStand === 'contact' ? 'Contact Stand' : '',
+    gseUsed:      ['GPU','ACU','ASU'].filter((_,i) => [cb('gseGPU'),cb('gseACU'),cb('gseASU')][i]).join(', ') || 'None',
     disruptionServices: disList,
     remarks: v('remarks'),
   };
@@ -776,6 +845,10 @@ function resetForm() {
   document.querySelectorAll('.fn-wrap').forEach(w => w.classList.remove('na-active','error'));
   document.querySelectorAll('input[id="destination"]').forEach(el => { el.style.opacity='1'; });
   document.querySelectorAll('.na-btn').forEach(b => b.classList.remove('active'));
+  selectedStand = '';
+  document.getElementById('stand-remote').classList.remove('selected','error-tile');
+  document.getElementById('stand-contact').classList.remove('selected','error-tile');
+  document.getElementById('err-standType').style.display = 'none';
   Object.keys(naState).forEach(k => delete naState[k]);
   toggleLbbReason();
   window.scrollTo({ top: 0, behavior: 'smooth' });
